@@ -40,6 +40,7 @@
     }
     button:disabled {
       background: #999;
+      cursor: not-allowed;
     }
     #status {
       margin-top: 15px;
@@ -54,14 +55,12 @@
     <h2>Absensi Warung Blakblakan</h2>
     <p>Ambil foto selfie untuk bukti absensi.</p>
 
-    <video id="video" autoplay playsinline></video>
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
     <img id="preview" style="display:none" alt="Pratinjau selfie">
 
-    <button id="captureButton" onclick="ambilFoto()">Ambil Foto</button>
-    <button id="sendButton" onclick="kirimFoto()" disabled>
-      Kirim Foto ke Absensi
-    </button>
+    <button id="captureButton" disabled>Menyiapkan Kamera...</button>
+    <button id="sendButton" disabled>Kirim Foto ke Absensi</button>
 
     <p id="status">Mengaktifkan kamera...</p>
   </div>
@@ -79,6 +78,11 @@
 
     async function aktifkanKamera() {
       try {
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Browser tidak mendukung akses kamera.');
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'user',
@@ -89,16 +93,48 @@
         });
 
         video.srcObject = stream;
-        statusText.textContent = 'Kamera aktif. Silakan ambil foto selfie.';
+
+        await new Promise((resolve, reject) => {
+          if (video.readyState >= 2 && video.videoWidth > 0) {
+            resolve();
+            return;
+          }
+
+          video.onloadedmetadata = resolve;
+          video.onerror = () => reject(
+            new Error('Video kamera gagal dimuat.')
+          );
+        });
+
+        await video.play();
+
+        captureButton.disabled = false;
+        captureButton.textContent = 'Ambil Foto';
+        statusText.textContent =
+          'Kamera aktif. Silakan ambil foto selfie.';
+
       } catch (error) {
         statusText.textContent =
-          'Kamera tidak dapat diaktifkan. Periksa izin kamera pada browser.';
+          'Kamera gagal diaktifkan: ' + error.message +
+          '. Periksa izin kamera browser.';
+        captureButton.disabled = true;
       }
     }
 
     function ambilFoto() {
-      if (!video.videoWidth) {
-        statusText.textContent = 'Kamera belum siap. Coba beberapa saat lagi.';
+      if (!stream || !video.videoWidth || video.readyState < 2) {
+        statusText.textContent =
+          'Kamera belum siap. Tunggu beberapa saat lalu coba lagi.';
+        return;
+      }
+
+      if (fotoData) {
+        fotoData = null;
+        preview.style.display = 'none';
+        video.style.display = 'block';
+        captureButton.textContent = 'Ambil Foto';
+        sendButton.disabled = true;
+        statusText.textContent = 'Silakan ambil foto ulang.';
         return;
       }
 
@@ -106,6 +142,12 @@
       canvas.height = video.videoHeight;
 
       const context = canvas.getContext('2d');
+
+      if (!context) {
+        statusText.textContent = 'Gagal memproses foto.';
+        return;
+      }
+
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       fotoData = canvas.toDataURL('image/jpeg', 0.75);
@@ -116,12 +158,15 @@
 
       captureButton.textContent = 'Ambil Ulang Foto';
       sendButton.disabled = false;
-      statusText.textContent = 'Foto berhasil diambil. Periksa hasil foto sebelum mengirim.';
+
+      statusText.textContent =
+        'Foto berhasil diambil. Periksa hasil foto sebelum mengirim.';
     }
 
     function kirimFoto() {
       if (!fotoData) {
-        statusText.textContent = 'Silakan ambil foto terlebih dahulu.';
+        statusText.textContent =
+          'Silakan ambil foto terlebih dahulu.';
         return;
       }
 
@@ -143,16 +188,8 @@
         'Foto sudah dikirim ke halaman absensi. Silakan kembali ke tab absensi.';
     }
 
-    captureButton.addEventListener('click', () => {
-      if (fotoData) {
-        fotoData = null;
-        preview.style.display = 'none';
-        video.style.display = 'block';
-        captureButton.textContent = 'Ambil Foto';
-        sendButton.disabled = true;
-        statusText.textContent = 'Silakan ambil foto ulang.';
-      }
-    });
+    captureButton.addEventListener('click', ambilFoto);
+    sendButton.addEventListener('click', kirimFoto);
 
     aktifkanKamera();
   </script>
