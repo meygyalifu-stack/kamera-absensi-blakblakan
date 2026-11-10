@@ -194,7 +194,11 @@
       }, '*');
 
       statusText.textContent =
-        'Foto sudah dikirim. Silakan kembali ke halaman absensi.';
+  'Foto berhasil dikirim. Kembali ke halaman absensi...';
+
+setTimeout(function() {
+  window.close();
+}, 700);
     }
 
     captureButton.addEventListener('click', function() {
