@@ -173,33 +173,35 @@
     }
 
     function kirimFoto() {
-      if (!fotoData) {
-        statusText.textContent =
-          'Silakan ambil foto terlebih dahulu.';
-        return;
-      }
+  if (!fotoData) {
+    statusText.textContent =
+      'Silakan ambil foto terlebih dahulu.';
+    return;
+  }
 
-      if (!window.opener || window.opener.closed) {
-        statusText.textContent =
-          'Halaman absensi tidak ditemukan. Buka kamera melalui tombol di halaman absensi.';
-        return;
-      }
+  if (!window.opener || window.opener.closed) {
+    statusText.textContent =
+      'Halaman absensi tidak ditemukan. Buka kamera dari halaman absensi.';
+    return;
+  }
 
-      sendButton.disabled = true;
-      statusText.textContent = 'Mengirim foto ke halaman absensi...';
+  sendButton.disabled = true;
+  statusText.textContent = 'Mengirim foto ke halaman absensi...';
 
-      window.opener.postMessage({
-        type: 'WARUNG_SELFIE',
-        foto: fotoData
-      }, '*');
+  window.opener.postMessage({
+    type: 'WARUNG_SELFIE',
+    foto: fotoData
+  }, 'https://script.google.com');
 
-      statusText.textContent =
-  'Foto berhasil dikirim. Kembali ke halaman absensi...';
+  statusText.textContent =
+    'Foto berhasil dikirim. Kembali ke halaman absensi...';
 
-setTimeout(function() {
-  window.close();
-}, 700);
-    }
+  window.opener.focus();
+
+  setTimeout(function() {
+    window.close();
+  }, 500);
+}
 
     captureButton.addEventListener('click', function() {
       if (fotoData) {
