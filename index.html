@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kamera Absensi Warung Blakblakan</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f1e9;
+      color: #34372d;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: 25px auto;
+      padding: 24px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 3px 15px #0001;
+      text-align: center;
+    }
+
+    video, canvas, img {
+      width: 100%;
+      border-radius: 12px;
+      background: #222;
+      margin-top: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #66765c;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    button:disabled { opacity: .5; }
+
+    #preview { display: none; }
+
+    #status {
+      margin-top: 18px;
+      line-height: 1.5;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>SELFIE ABSENSI</h2>
+    <p>WARUNG BLAKBLAKAN</p>
+
+    <video id="kamera" autoplay playsinline muted></video>
+    <canvas id="kanvas" hidden></canvas>
+    <img id="preview" alt="Pratinjau selfie">
+
+    <button id="btnKamera" onclick="aktifkanKamera()">
+      AKTIFKAN KAMERA DEPAN
+    </button>
+
+    <button id="btnFoto" onclick="ambilFoto()" disabled>
+      AMBIL SELFIE
+    </button>
+
+    <button id="btnUlang" onclick="ulangiFoto()" hidden>
+      ULANGI FOTO
+    </button>
+
+    <button id="btnKirim" onclick="kirimFoto()" disabled>
+      KIRIM FOTO
+    </button>
+
+    <div id="status">Silakan aktifkan kamera.</div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const kamera = document.getElementById('kamera');
+    const kanvas = document.getElementById('kanvas');
+    const preview = document.getElementById('preview');
+
+    let stream = null;
+    let foto = null;
+
+    function status(pesan) {
+      document.getElementById('status').textContent = pesan;
+    }
+
+    async function aktifkanKamera() {
+      try {
+        hentikanKamera();
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        });
+
+        kamera.srcObject = stream;
+        await kamera.play();
+
+        kamera.hidden = false;
+        preview.style.display = 'none';
+
+        document.getElementById('btnFoto').disabled = false;
+        status('Kamera aktif. Silakan ambil selfie.');
+      } catch (e) {
+        status('Kamera gagal dibuka: ' + e.message);
+      }
+    }
+
+    function ambilFoto() {
+      if (!stream || !kamera.videoWidth) return;
+
+      const width = Math.min(640, kamera.videoWidth);
+      const height = Math.round(
+        width * kamera.videoHeight / kamera.videoWidth
+      );
+
+      kanvas.width = width;
+      kanvas.height = height;
+
+      const ctx = kanvas.getContext('2d');
+      ctx.translate(width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(kamera, 0, 0, width, height);
+
+      foto = kanvas.toDataURL('image/jpeg', 0.65);
+
+      preview.src = foto;
+      preview.style.display = 'block';
+      kamera.hidden = true;
+
+      hentikanKamera();
+
+      document.getElementById('btnFoto').disabled = true;
+      document.getElementById('btnUlang').hidden = false;
+      document.getElementById('btnKirim').disabled = false;
+
+      status('Periksa foto sebelum dikirim.');
+    }
+
+    function ulangiFoto() {
+      foto = null;
+      preview.src = '';
+      preview.style.display = 'none';
+
+      document.getElementById('btnUlang').hidden = true;
+      document.getElementById('btnKirim').disabled = true;
+
+      aktifkanKamera();
+    }
+
+    function hentikanKamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+    }
+
+    function kirimFoto() {
+      if (!foto) return;
+
+      // Pengiriman ke Apps Script akan dihubungkan
+      // pada tahap integrasi berikutnya.
+      status('Foto berhasil diambil. Integrasi belum diaktifkan.');
+    }
+
+    window.addEventListener('pagehide', hentikanKamera);
+  </script>
+</body>
+</html>
