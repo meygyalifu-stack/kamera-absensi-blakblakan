@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -78,11 +78,6 @@
 
     async function aktifkanKamera() {
       try {
-        if (!navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Browser tidak mendukung akses kamera.');
-        }
-
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'user',
@@ -93,37 +88,19 @@
         });
 
         video.srcObject = stream;
-
-        await new Promise((resolve, reject) => {
-          if (video.readyState >= 2 && video.videoWidth > 0) {
-            resolve();
-          } else {
-            video.onloadeddata = resolve;
-            video.onerror = () => reject(
-              new Error('Video kamera gagal dimuat.')
-            );
-          }
-        });
-
         await video.play();
 
         captureButton.disabled = false;
         captureButton.textContent = 'Ambil Foto';
-        statusText.textContent =
-          'Kamera aktif. Silakan ambil foto selfie.';
-
+        statusText.textContent = 'Kamera aktif. Silakan ambil foto selfie.';
       } catch (error) {
-        statusText.textContent =
-          'Kamera gagal diaktifkan: ' + error.message;
+        statusText.textContent = 'Kamera gagal diaktifkan: ' + error.message;
       }
     }
 
     function ambilFoto() {
-      statusText.textContent = 'Sedang mengambil foto...';
-
       try {
-        if (!video.srcObject || video.readyState < 2 ||
-            video.videoWidth === 0) {
+        if (!video.srcObject || video.videoWidth === 0) {
           throw new Error('Kamera belum siap.');
         }
 
@@ -131,34 +108,19 @@
         canvas.height = video.videoHeight;
 
         const context = canvas.getContext('2d');
-        if (!context) {
-          throw new Error('Canvas tidak dapat digunakan.');
-        }
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        context.drawImage(
-          video, 0, 0, canvas.width, canvas.height
-        );
+        fotoData = canvas.toDataURL('image/jpeg', 0.75);
 
-        const hasil = canvas.toDataURL('image/jpeg', 0.75);
-
-        if (!hasil || hasil.length < 1000) {
-          throw new Error('Hasil foto kosong.');
-        }
-
-        fotoData = hasil;
-        preview.src = hasil;
+        preview.src = fotoData;
         preview.style.display = 'block';
         video.style.display = 'none';
 
         captureButton.textContent = 'Ambil Ulang Foto';
         sendButton.disabled = false;
-
-        statusText.textContent =
-          'Foto berhasil diambil. Silakan periksa hasilnya.';
-
+        statusText.textContent = 'Foto berhasil diambil. Periksa hasilnya.';
       } catch (error) {
-        statusText.textContent =
-          'Gagal mengambil foto: ' + error.message;
+        statusText.textContent = 'Gagal mengambil foto: ' + error.message;
       }
     }
 
@@ -173,61 +135,32 @@
     }
 
     function kirimFoto() {
-  if (!fotoData) {
-    statusText.textContent =
-      'Silakan ambil foto terlebih dahulu.';
-    return;
-  }
+      if (!fotoData) {
+        statusText.textContent = 'Ambil foto terlebih dahulu.';
+        return;
+      }
 
-  if (!window.opener || window.opener.closed) {
-    statusText.textContent =
-      'Halaman absensi tidak ditemukan. Buka kamera dari halaman absensi.';
-    return;
-  }
+      if (!window.opener || window.opener.closed) {
+        statusText.textContent = 'Halaman absensi tidak terhubung.';
+        return;
+      }
 
-  sendButton.disabled = true;
-  statusText.textContent =
-    'Mengirim foto ke halaman absensi...';
+      sendButton.disabled = true;
+      statusText.textContent = 'Mengirim foto ke halaman absensi...';
 
-  try {
-    window.opener.postMessage({
-      type: 'WARUNG_SELFIE',
-      foto: fotoData
-    }, '*');
+      window.opener.postMessage({
+        type: 'WARUNG_SELFIE',
+        foto: fotoData
+      }, '*');
 
-    statusText.textContent =
-      'Foto dikirim. Menunggu halaman absensi menerima foto...';
+      statusText.textContent = 'Pesan foto sudah dikirim.';
 
-    window.opener.focus();
+      window.opener.focus();
 
-    setTimeout(function() {
-      window.close();
-    }, 1500);
-
-  } catch (error) {
-    sendButton.disabled = false;
-    statusText.textContent =
-      'Gagal mengirim foto: ' + error.message;
-  }
-}
-
-  sendButton.disabled = true;
-  statusText.textContent = 'Mengirim foto ke halaman absensi...';
-
-  window.opener.postMessage({
-    type: 'WARUNG_SELFIE',
-    foto: fotoData
-  }, 'https://script.google.com');
-
-  statusText.textContent =
-    'Foto berhasil dikirim. Kembali ke halaman absensi...';
-
-  window.opener.focus();
-
-  setTimeout(function() {
-    window.close();
-  }, 500);
-}
+      setTimeout(function() {
+        window.close();
+      }, 1500);
+    }
 
     captureButton.addEventListener('click', function() {
       if (fotoData) {
@@ -239,7 +172,14 @@
 
     sendButton.addEventListener('click', kirimFoto);
 
+    window.addEventListener('beforeunload', function() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    });
+
     aktifkanKamera();
   </script>
 </body>
 </html>
+```
