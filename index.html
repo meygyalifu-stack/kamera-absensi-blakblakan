@@ -186,6 +186,32 @@
   }
 
   sendButton.disabled = true;
+  statusText.textContent =
+    'Mengirim foto ke halaman absensi...';
+
+  try {
+    window.opener.postMessage({
+      type: 'WARUNG_SELFIE',
+      foto: fotoData
+    }, '*');
+
+    statusText.textContent =
+      'Foto dikirim. Menunggu halaman absensi menerima foto...';
+
+    window.opener.focus();
+
+    setTimeout(function() {
+      window.close();
+    }, 1500);
+
+  } catch (error) {
+    sendButton.disabled = false;
+    statusText.textContent =
+      'Gagal mengirim foto: ' + error.message;
+  }
+}
+
+  sendButton.disabled = true;
   statusText.textContent = 'Mengirim foto ke halaman absensi...';
 
   window.opener.postMessage({
